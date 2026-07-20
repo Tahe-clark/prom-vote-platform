@@ -5,9 +5,13 @@ import { Button } from "@/components/ui/button";
 import {
   addCandidate,
   deleteCandidate,
+  updateCandidate
 } from "@/actions/candidates";
 
 import { Input } from "@/components/ui/input";
+import { toggleVoting } from "@/actions/settings";
+import AdminCandidateResults from "@/components/AdminCandidateResults";
+import CandidatePhotoField from "@/components/CandidatePhotoField";
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
@@ -31,20 +35,6 @@ export default async function AdminDashboardPage() {
     redirect("/admin/login");
   }
 
-  const { count: candidatesCount } = await supabase
-    .from("candidates")
-    .select("*", {
-      count: "exact",
-      head: true,
-    });
-
-  const { count: votesCount } = await supabase
-    .from("votes")
-    .select("*", {
-      count: "exact",
-      head: true,
-    });
-
   const { data: candidates } = await supabase
     .from("candidates")
     .select(`
@@ -60,6 +50,51 @@ export default async function AdminDashboardPage() {
     .order("created_at", {
       ascending: true,
     });
+
+  const kingCandidates =
+    candidates?.filter(
+        (candidate) => candidate.category === "roi"
+    ) ?? [];
+
+    const queenCandidates =
+    candidates?.filter(
+        (candidate) => candidate.category === "reine"
+    ) ?? [];
+
+    const kingVotes = kingCandidates.reduce(
+    (total, candidate) =>
+        total + (candidate.votes?.length ?? 0),
+    0
+    );
+
+    const queenVotes = queenCandidates.reduce(
+    (total, candidate) =>
+        total + (candidate.votes?.length ?? 0),
+    0
+    );
+
+    const totalVotes = kingVotes + queenVotes;
+
+    const totalCandidates =
+    kingCandidates.length + queenCandidates.length;
+
+    const sortedKings = [...kingCandidates].sort(
+    (a, b) =>
+        (b.votes?.length ?? 0) -
+        (a.votes?.length ?? 0)
+    );
+
+    const sortedQueens = [...queenCandidates].sort(
+    (a, b) =>
+        (b.votes?.length ?? 0) -
+        (a.votes?.length ?? 0)
+    );
+
+  const { data: settings } = await supabase
+  .from("settings")
+  .select("id, voting_open, end_date")
+  .limit(1)
+  .maybeSingle();
 
   return (
     <main className="min-h-screen bg-neutral-100 p-6 md:p-10">
@@ -87,36 +122,117 @@ export default async function AdminDashboardPage() {
           </form>
         </header>
 
-        <section className="mb-10 grid gap-5 md:grid-cols-3">
-          <div className="rounded-xl border bg-white p-6">
+       <section className="mb-10 space-y-5">
+        <div className="grid gap-5 md:grid-cols-3">
+            <div className="rounded-xl border bg-white p-6">
             <p className="text-sm text-neutral-500">
-              Candidats
+                Total des votes
             </p>
 
             <p className="mt-2 text-3xl font-bold">
-              {candidatesCount ?? 0}
+                {totalVotes}
             </p>
-          </div>
+            </div>
 
-          <div className="rounded-xl border bg-white p-6">
+            <div className="rounded-xl border bg-white p-6">
             <p className="text-sm text-neutral-500">
-              Votes
+                Votes — Roi
             </p>
 
             <p className="mt-2 text-3xl font-bold">
-              {votesCount ?? 0}
+                {kingVotes}
             </p>
-          </div>
+            </div>
 
-          <div className="rounded-xl border bg-white p-6">
+            <div className="rounded-xl border bg-white p-6">
             <p className="text-sm text-neutral-500">
-              Statut
+                Votes — Reine
             </p>
 
-            <p className="mt-2 text-xl font-bold text-green-600">
-              Vote ouvert
+            <p className="mt-2 text-3xl font-bold">
+                {queenVotes}
             </p>
-          </div>
+            </div>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-3">
+            <div className="rounded-xl border bg-white p-6">
+            <p className="text-sm text-neutral-500">
+                Total des candidats
+            </p>
+
+            <p className="mt-2 text-3xl font-bold">
+                {totalCandidates}
+            </p>
+            </div>
+
+            <div className="rounded-xl border bg-white p-6">
+            <p className="text-sm text-neutral-500">
+                Candidats — Roi
+            </p>
+
+            <p className="mt-2 text-3xl font-bold">
+                {kingCandidates.length}
+            </p>
+            </div>
+
+            <div className="rounded-xl border bg-white p-6">
+            <p className="text-sm text-neutral-500">
+                Candidates — Reine
+            </p>
+
+            <p className="mt-2 text-3xl font-bold">
+                {queenCandidates.length}
+            </p>
+            </div>
+        </div>
+
+        <div className="rounded-xl border bg-white p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p className="text-sm text-neutral-500">
+                Statut de l'élection
+                </p>
+
+                <p
+                className={`mt-2 text-xl font-bold ${
+                    settings?.voting_open
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+                >
+                {settings?.voting_open
+                    ? "Vote ouvert"
+                    : "Vote fermé"}
+                </p>
+            </div>
+
+            {settings && (
+                <form action={toggleVoting}>
+                <input
+                    type="hidden"
+                    name="settings_id"
+                    value={settings.id}
+                />
+
+                <input
+                    type="hidden"
+                    name="current_status"
+                    value={String(settings.voting_open)}
+                />
+
+                <Button
+                    type="submit"
+                    variant="outline"
+                >
+                    {settings.voting_open
+                    ? "Fermer les votes"
+                    : "Ouvrir les votes"}
+                </Button>
+                </form>
+            )}
+            </div>
+        </div>
         </section>
 
         <section className="mb-10 rounded-xl border bg-white p-6">
@@ -171,20 +287,12 @@ export default async function AdminDashboardPage() {
             </select>
             </div>
 
-            <div className="md:col-span-2">
-            <label
-                htmlFor="photo_url"
-                className="mb-2 block text-sm font-medium"
-            >
-                URL de la photo
+           <div className="md:col-span-2">
+            <label className="mb-3 block text-sm font-medium">
+                Photo du candidat
             </label>
 
-            <Input
-                id="photo_url"
-                name="photo_url"
-                type="url"
-                placeholder="https://..."
-            />
+            <CandidatePhotoField />
             </div>
 
             <div className="md:col-span-2">
@@ -212,75 +320,19 @@ export default async function AdminDashboardPage() {
         </section>
 
         <section className="rounded-xl border bg-white p-6">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">
-                Candidats et résultats
-              </h2>
+          <div className="space-y-8">
+  <AdminCandidateResults
+    title="👑 Résultats — Roi"
+    candidates={sortedKings}
+    categoryVotes={kingVotes}
+  />
 
-              <p className="text-sm text-neutral-500">
-                Classement actuel de l'élection.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {candidates?.map((candidate) => {
-              const voteCount =
-                candidate.votes?.length ?? 0;
-
-              return (
-                <div
-                  key={candidate.id}
-                  className="flex items-center justify-between rounded-lg border p-4"
-                >
-                  <div>
-                    <h3 className="font-semibold">
-                      {candidate.name}
-                    </h3>
-
-                    <span className="text-sm uppercase text-neutral-500">
-                      {candidate.category}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-5">
-                    <div className="text-right">
-                        <p className="text-2xl font-bold">
-                        {voteCount}
-                        </p>
-
-                        <p className="text-xs text-neutral-500">
-                        vote{voteCount !== 1 ? "s" : ""}
-                        </p>
-                    </div>
-
-                    <form action={deleteCandidate}>
-                        <input
-                        type="hidden"
-                        name="candidate_id"
-                        value={candidate.id}
-                        />
-
-                        <Button
-                        type="submit"
-                        variant="outline"
-                        className="text-red-600"
-                        >
-                        Supprimer
-                        </Button>
-                    </form>
-                    </div>
-                </div>
-              );
-            })}
-
-            {!candidates?.length && (
-              <p className="py-8 text-center text-neutral-500">
-                Aucun candidat.
-              </p>
-            )}
-          </div>
+  <AdminCandidateResults
+    title="👑 Résultats — Reine"
+    candidates={sortedQueens}
+    categoryVotes={queenVotes}
+  />
+</div>
         </section>
       </div>
     </main>

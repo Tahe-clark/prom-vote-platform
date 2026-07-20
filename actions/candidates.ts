@@ -70,6 +70,53 @@ export async function addCandidate(formData: FormData) {
   revalidatePath("/vote");
 }
 
+export async function updateCandidate(formData: FormData) {
+  const supabase = await requireAdmin();
+
+  const candidateId = formData.get("candidate_id");
+  const name = formData.get("name");
+  const category = formData.get("category");
+  const photoUrl = formData.get("photo_url");
+  const description = formData.get("description");
+
+  if (
+    typeof candidateId !== "string" ||
+    typeof name !== "string" ||
+    !name.trim() ||
+    (category !== "roi" && category !== "reine")
+  ) {
+    throw new Error("Données candidat invalides.");
+  }
+
+  const { error } = await supabase
+    .from("candidates")
+    .update({
+      name: name.trim(),
+      category,
+      photo_url:
+        typeof photoUrl === "string" && photoUrl.trim()
+          ? photoUrl.trim()
+          : null,
+      description:
+        typeof description === "string" &&
+        description.trim()
+          ? description.trim()
+          : null,
+    })
+    .eq("id", candidateId);
+
+  if (error) {
+    console.error("Erreur modification candidat:", error);
+
+    throw new Error(
+      "Impossible de modifier le candidat."
+    );
+  }
+
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/vote");
+}
+
 export async function deleteCandidate(
   formData: FormData
 ) {

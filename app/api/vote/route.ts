@@ -8,6 +8,41 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const candidateId = body.candidateId;
+    const { data: settings, error: settingsError } =
+  await supabase
+    .from("settings")
+    .select("voting_open")
+    .limit(1)
+    .maybeSingle();
+
+if (settingsError) {
+  console.error(
+    "Erreur récupération configuration:",
+    settingsError
+  );
+
+  return NextResponse.json(
+    {
+      error:
+        "Impossible de vérifier le statut du vote.",
+    },
+    {
+      status: 500,
+    }
+  );
+}
+
+if (!settings?.voting_open) {
+  return NextResponse.json(
+    {
+      error:
+        "Les votes sont actuellement fermés.",
+    },
+    {
+      status: 403,
+    }
+  );
+}
 
     if (!candidateId || typeof candidateId !== "string") {
       return NextResponse.json(
