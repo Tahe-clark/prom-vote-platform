@@ -4,8 +4,6 @@ import { logout } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
   addCandidate,
-  deleteCandidate,
-  updateCandidate
 } from "@/actions/candidates";
 
 import { Input } from "@/components/ui/input";
@@ -191,7 +189,7 @@ export default async function AdminDashboardPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <p className="text-sm text-neutral-500">
-                Statut de l'élection
+                Statut de l&apos;élection
                 </p>
 
                 <p
@@ -241,7 +239,7 @@ export default async function AdminDashboardPage() {
         </h2>
 
         <p className="mt-1 text-sm text-neutral-500">
-            Ajoutez un candidat à l'élection.
+            Ajoutez un candidat à l&apos;élection.
         </p>
 
         <form

@@ -167,7 +167,7 @@ export default function CandidatePhotoField() {
 
         <p className="mt-2 text-xs text-neutral-500">
           Vous pouvez par exemple téléverser
-          l'image sur ImgBB puis coller son lien ici.
+          l&apos;image sur ImgBB puis coller son lien ici.
         </p>
       </div>
 

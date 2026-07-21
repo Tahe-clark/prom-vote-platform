@@ -35,7 +35,7 @@ export default async function AdminLoginPage() {
           </h1>
 
           <p className="mt-2 text-sm text-neutral-500">
-            Connectez-vous pour gérer l'élection.
+            Connectez-vous pour gérer l&apos;élection.
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const VOTER_COOKIE = "prom_voter_token";
 
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const candidateId = body.candidateId;
     const { data: settings, error: settingsError } =
-  await supabase
+  await supabaseAdmin
     .from("settings")
     .select("voting_open")
     .limit(1)
@@ -52,7 +52,7 @@ if (!settings?.voting_open) {
     }
 
     // 1. Vérifier que le candidat existe réellement.
-    const { data: candidate, error: candidateError } = await supabase
+    const { data: candidate, error: candidateError } = await supabaseAdmin
       .from("candidates")
       .select("id, category")
       .eq("id", candidateId)
@@ -88,7 +88,7 @@ if (!settings?.voting_open) {
     // 3. Vérifier si ce navigateur a déjà voté
     // dans cette catégorie.
     const { data: existingVote, error: existingVoteError } =
-      await supabase
+      await supabaseAdmin
         .from("votes")
         .select("id")
         .eq("voter_token", voterToken)
@@ -117,7 +117,7 @@ if (!settings?.voting_open) {
     }
 
     // 4. Enregistrer le vote.
-    const { error: voteError } = await supabase
+    const { error: voteError } = await supabaseAdmin
       .from("votes")
       .insert({
         candidate_id: candidate.id,

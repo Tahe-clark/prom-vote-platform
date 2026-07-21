@@ -4,6 +4,7 @@ import CandidateList from "@/components/CandidateList";
 import CookieNotice from "@/components/CookieNotice";
 
 import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import type { Candidate } from "@/types/candidate";
 
@@ -70,8 +71,8 @@ async function getExistingVotes(): Promise<ExistingVotes> {
     return result;
   }
 
-  const { data, error } = await supabase
-    .from("votes")
+  const { data, error } = await supabaseAdmin
+  .from("votes")
     .select("candidate_id, category")
     .eq("voter_token", voterToken);
 
@@ -85,14 +86,14 @@ async function getExistingVotes(): Promise<ExistingVotes> {
   }
 
   for (const vote of data ?? []) {
-    if (
-      vote.category === "roi" ||
-      vote.category === "reine"
-    ) {
-      result[vote.category] =
-        vote.candidate_id;
-    }
+  if (vote.category === "roi") {
+    result.roi = vote.candidate_id;
   }
+
+  if (vote.category === "reine") {
+    result.reine = vote.candidate_id;
+  }
+}
 
   return result;
 }

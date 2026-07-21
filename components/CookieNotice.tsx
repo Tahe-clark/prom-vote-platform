@@ -1,24 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-const STORAGE_KEY =
-  "prom_cookie_notice_seen";
+const STORAGE_KEY = "prom_cookie_notice_seen";
 
 export default function CookieNotice() {
-  const [visible, setVisible] =
-    useState(false);
-
-  useEffect(() => {
-    const alreadySeen =
-      window.localStorage.getItem(
-        STORAGE_KEY
-      );
-
-    if (!alreadySeen) {
-      setVisible(true);
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
     }
-  }, []);
+
+    return (
+      window.localStorage.getItem(STORAGE_KEY) !== "true"
+    );
+  });
 
   function handleDismiss() {
     window.localStorage.setItem(
