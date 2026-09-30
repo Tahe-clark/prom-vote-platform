@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import CandidateCard from "@/components/CandidateCard";
+import { useI18n } from "@/lib/i18n/client";
 
 import type { Candidate } from "@/types/candidate";
 
@@ -34,6 +35,8 @@ export default function CandidateList({
    * Il est initialisé depuis Supabase
    * lors du chargement de /vote.
    */
+  const { t } = useI18n();
+
   const [
     votedCandidateId,
     setVotedCandidateId,
@@ -82,7 +85,7 @@ export default function CandidateList({
 
       {candidates.length === 0 ? (
         <p className="text-center text-sm text-[#D9C7B8]/50">
-          Aucun candidat disponible pour le moment.
+          {t.vote.empty}
         </p>
       ) : (
         <div

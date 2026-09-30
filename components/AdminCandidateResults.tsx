@@ -1,196 +1,176 @@
-import { Button } from "@/components/ui/button";
-import {
-  deleteCandidate,
-  updateCandidate,
-} from "@/actions/candidates";
+import { Crown, UserRound } from "lucide-react";
 
-type AdminCandidate = {
-  id: string;
-  name: string;
-  category: string;
-  photo_url: string | null;
-  description: string | null;
-  votes: {
-    id: string;
-  }[];
-};
+import CandidateActions from "@/components/admin/CandidateActions";
+import {
+  dictionaries,
+  fmt,
+  isPlural,
+  percent,
+  type Locale,
+} from "@/lib/i18n/dictionaries";
+import { cn } from "@/lib/utils";
+import type { AdminCandidate } from "@/types/admin";
 
 interface AdminCandidateResultsProps {
   title: string;
+  category: "roi" | "reine";
+  /** Candidats déjà triés du plus voté au moins voté. */
   candidates: AdminCandidate[];
   categoryVotes: number;
+  locale: Locale;
 }
+
+const tones = {
+  roi: {
+    text: "text-adm-roi",
+    bar: "bg-adm-roi",
+    soft: "bg-adm-roi/6",
+  },
+  reine: {
+    text: "text-adm-reine",
+    bar: "bg-adm-reine",
+    soft: "bg-adm-reine/6",
+  },
+};
 
 export default function AdminCandidateResults({
   title,
+  category,
   candidates,
   categoryVotes,
+  locale,
 }: AdminCandidateResultsProps) {
+  const t = dictionaries[locale].admin;
+  const tone = tones[category];
+  const topCount = candidates[0]?.votes?.length ?? 0;
+
+  // Égalité en tête : on ne couronne personne.
+  const leaderTied =
+    candidates.length > 1 &&
+    (candidates[1]?.votes?.length ?? 0) === topCount;
+
   return (
-    <section className="rounded-xl border bg-white p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">
+    <section
+      aria-labelledby={`results-${category}`}
+      className="rounded-2xl bg-white ring-1 ring-adm-line"
+    >
+      <header className="flex items-baseline justify-between gap-4 border-b border-adm-line px-5 py-4 sm:px-6">
+        <h2
+          id={`results-${category}`}
+          className={cn(
+            "font-elegant text-2xl font-semibold",
+            tone.text
+          )}
+        >
           {title}
         </h2>
-
-        <p className="mt-1 text-sm text-neutral-500">
-          Classement du plus voté au moins voté.
+        <p className="nums shrink-0 text-sm text-adm-muted">
+          {categoryVotes}{" "}
+          {isPlural(locale, categoryVotes) ? t.voteOther : t.voteOne}
         </p>
-      </div>
+      </header>
 
-      <div className="space-y-4">
-        {candidates.map((candidate, index) => {
-          const voteCount =
-            candidate.votes?.length ?? 0;
-
-          const percentage =
-            categoryVotes > 0
-              ? (
-                  (voteCount / categoryVotes) *
-                  100
-                ).toFixed(1)
-              : "0.0";
-
-          return (
-            <div
-              key={candidate.id}
-              className="rounded-xl border p-4"
-            >
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
-                    {candidate.photo_url ? (
-                      <img
-                        src={candidate.photo_url}
-                        alt={candidate.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-xs text-neutral-400">
-                        Photo
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-neutral-400">
-                      #{index + 1}
-                    </p>
-
-                    <h3 className="font-semibold">
-                      {candidate.name}
-                    </h3>
-
-                    <p className="text-sm uppercase text-neutral-500">
-                      {candidate.category}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="min-w-24 text-right">
-                    <p className="text-2xl font-bold">
-                      {voteCount}
-                    </p>
-
-                    <p className="text-xs text-neutral-500">
-                      vote{voteCount !== 1 ? "s" : ""} ·{" "}
-                      {percentage} %
-                    </p>
-                  </div>
-
-                  <details className="rounded-md border p-3">
-                    <summary className="cursor-pointer text-sm font-medium">
-                      Modifier
-                    </summary>
-
-                    <form
-                      action={updateCandidate}
-                      className="mt-4 min-w-64 space-y-3"
-                    >
-                      <input
-                        type="hidden"
-                        name="candidate_id"
-                        value={candidate.id}
-                      />
-
-                      <input
-                        name="name"
-                        defaultValue={candidate.name}
-                        required
-                        className="h-9 w-full rounded-md border px-3 text-sm"
-                      />
-
-                      <select
-                        name="category"
-                        defaultValue={candidate.category}
-                        className="h-9 w-full rounded-md border px-3 text-sm"
-                      >
-                        <option value="roi">
-                          Roi
-                        </option>
-
-                        <option value="reine">
-                          Reine
-                        </option>
-                      </select>
-
-                      <input
-                        name="photo_url"
-                        type="url"
-                        defaultValue={
-                          candidate.photo_url ?? ""
-                        }
-                        placeholder="URL de la photo"
-                        className="h-9 w-full rounded-md border px-3 text-sm"
-                      />
-
-                      <textarea
-                        name="description"
-                        defaultValue={
-                          candidate.description ?? ""
-                        }
-                        rows={3}
-                        className="w-full rounded-md border p-3 text-sm"
-                      />
-
-                      <Button
-                        type="submit"
-                        size="sm"
-                      >
-                        Enregistrer
-                      </Button>
-                    </form>
-                  </details>
-
-                  <form action={deleteCandidate}>
-                    <input
-                      type="hidden"
-                      name="candidate_id"
-                      value={candidate.id}
-                    />
-
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      className="text-red-600"
-                    >
-                      Supprimer
-                    </Button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {candidates.length === 0 && (
-          <p className="py-8 text-center text-neutral-500">
-            Aucun candidat dans cette catégorie.
+      {candidates.length === 0 ? (
+        <div className="px-6 py-10 text-center">
+          <p className="text-sm text-adm-muted">
+            {t.emptyCategory}
           </p>
-        )}
-      </div>
+        </div>
+      ) : (
+        <ol className="divide-y divide-adm-line">
+          {candidates.map((candidate, index) => {
+            const voteCount = candidate.votes?.length ?? 0;
+            const share =
+              categoryVotes > 0
+                ? (voteCount / categoryVotes) * 100
+                : 0;
+            const isLeader =
+              index === 0 && voteCount > 0 && !leaderTied;
+
+            // Ex æquo : même rang pour le même nombre de votes.
+            const rank =
+              1 +
+              candidates.filter(
+                (other) => (other.votes?.length ?? 0) > voteCount
+              ).length;
+
+            return (
+              <li
+                key={candidate.id}
+                className={cn(
+                  "grid grid-cols-[1.5rem_2.5rem_1fr_auto] items-center gap-x-3 px-4 py-3 sm:grid-cols-[2rem_3.5rem_1fr_auto] sm:gap-x-4 sm:px-6",
+                  isLeader && tone.soft
+                )}
+              >
+                <span
+                  className={cn(
+                    "nums text-center font-elegant text-lg",
+                    isLeader ? tone.text : "text-adm-muted"
+                  )}
+                  aria-label={fmt(t.rank, { n: rank })}
+                >
+                  {isLeader ? (
+                    <Crown className="mx-auto size-5" aria-hidden />
+                  ) : (
+                    rank
+                  )}
+                </span>
+
+                <div className="aspect-[4/5] w-10 overflow-hidden rounded-md bg-adm-bg sm:w-14">
+                  {candidate.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={candidate.photo_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-full place-items-center text-adm-muted/50">
+                      <UserRound className="size-5" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-adm-ink">
+                    {candidate.name}
+                  </p>
+
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <div
+                      className="h-1.5 flex-1 overflow-hidden rounded-full bg-adm-bg"
+                      role="img"
+                      aria-label={fmt(t.share, { p: percent(locale, share, 1) })}
+                    >
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-[width] duration-700 motion-reduce:transition-none",
+                          tone.bar,
+                          !isLeader && "opacity-55"
+                        )}
+                        style={{ width: `${share}%` }}
+                      />
+                    </div>
+                    <p className="nums flex shrink-0 items-baseline gap-2 text-sm">
+                      <span className="font-semibold text-adm-ink">
+                        {voteCount}
+                      </span>
+                      <span className="w-9 text-right text-xs text-adm-muted">
+                        {percent(locale, share)}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <CandidateActions
+                  candidate={candidate}
+                  voteCount={voteCount}
+                />
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </section>
   );
 }

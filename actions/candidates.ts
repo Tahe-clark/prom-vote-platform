@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { EDITS_LOCKED } from "@/lib/edit-lock";
+import type { AdminActionResult } from "@/actions/result";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -27,7 +29,11 @@ async function requireAdmin() {
   return supabase;
 }
 
-export async function addCandidate(formData: FormData) {
+export async function addCandidate(formData: FormData): Promise<AdminActionResult> {
+  if (EDITS_LOCKED) {
+    return { ok: false, error: "locked" };
+  }
+
   const supabase = await requireAdmin();
 
   const name = formData.get("name");
@@ -40,7 +46,7 @@ export async function addCandidate(formData: FormData) {
     !name.trim() ||
     (category !== "roi" && category !== "reine")
   ) {
-    throw new Error("Données candidat invalides.");
+    return { ok: false, error: "invalid" };
   }
 
   const { error } = await supabase
@@ -61,16 +67,20 @@ export async function addCandidate(formData: FormData) {
 
   if (error) {
     console.error(error);
-    throw new Error(
-      "Impossible d'ajouter le candidat."
-    );
+    return { ok: false, error: "failed" };
   }
 
   revalidatePath("/admin/dashboard");
   revalidatePath("/vote");
+
+  return { ok: true };
 }
 
-export async function updateCandidate(formData: FormData) {
+export async function updateCandidate(formData: FormData): Promise<AdminActionResult> {
+  if (EDITS_LOCKED) {
+    return { ok: false, error: "locked" };
+  }
+
   const supabase = await requireAdmin();
 
   const candidateId = formData.get("candidate_id");
@@ -85,7 +95,7 @@ export async function updateCandidate(formData: FormData) {
     !name.trim() ||
     (category !== "roi" && category !== "reine")
   ) {
-    throw new Error("Données candidat invalides.");
+    return { ok: false, error: "invalid" };
   }
 
   const { error } = await supabase
@@ -108,25 +118,29 @@ export async function updateCandidate(formData: FormData) {
   if (error) {
     console.error("Erreur modification candidat:", error);
 
-    throw new Error(
-      "Impossible de modifier le candidat."
-    );
+    return { ok: false, error: "failed" };
   }
 
   revalidatePath("/admin/dashboard");
   revalidatePath("/vote");
+
+  return { ok: true };
 }
 
 export async function deleteCandidate(
   formData: FormData
-) {
+): Promise<AdminActionResult> {
+  if (EDITS_LOCKED) {
+    return { ok: false, error: "locked" };
+  }
+
   const supabase = await requireAdmin();
 
   const candidateId =
     formData.get("candidate_id");
 
   if (typeof candidateId !== "string") {
-    throw new Error("Candidat invalide.");
+    return { ok: false, error: "invalid" };
   }
 
   const { error } = await supabase
@@ -136,11 +150,11 @@ export async function deleteCandidate(
 
   if (error) {
     console.error(error);
-    throw new Error(
-      "Impossible de supprimer le candidat."
-    );
+    return { ok: false, error: "failed" };
   }
 
   revalidatePath("/admin/dashboard");
   revalidatePath("/vote");
+
+  return { ok: true };
 }

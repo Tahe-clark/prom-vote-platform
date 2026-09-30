@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Inder, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { I18nProvider } from "@/lib/i18n/client";
+import { dictionaries } from "@/lib/i18n/dictionaries";
+import { getLocale } from "@/lib/i18n/server";
 
 const inder = Inder({
   weight: "400",
@@ -13,22 +16,28 @@ const playfair = Playfair_Display({
   variable: "--font-playfair",
 });
 
-export const metadata: Metadata = {
-  title: "Gala d'Élégance — Bal de Promo 2026",
-  description: "Élection du Roi et de la Reine du bal de promotion",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = dictionaries[await getLocale()].meta;
 
-export default function RootLayout({
+  return {
+    title: t.title,
+    description: t.description,
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+
   return (
-    <html lang="fr">
+    <html lang={locale}>
       <body
         className={`${inder.variable} ${playfair.variable} antialiased`}
       >
-        {children}
+        <I18nProvider locale={locale}>{children}</I18nProvider>
       </body>
     </html>
   );

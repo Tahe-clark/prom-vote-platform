@@ -23,8 +23,8 @@ if (settingsError) {
 
   return NextResponse.json(
     {
-      error:
-        "Impossible de vérifier le statut du vote.",
+      code: "settings_error",
+          error: "Impossible de vérifier le statut du vote.",
     },
     {
       status: 500,
@@ -35,8 +35,8 @@ if (settingsError) {
 if (!settings?.voting_open) {
   return NextResponse.json(
     {
-      error:
-        "Les votes sont actuellement fermés.",
+      code: "closed",
+          error: "Les votes sont actuellement fermés.",
     },
     {
       status: 403,
@@ -46,7 +46,8 @@ if (!settings?.voting_open) {
 
     if (!candidateId || typeof candidateId !== "string") {
       return NextResponse.json(
-        { error: "Candidat invalide." },
+        { code: "invalid_candidate",
+          error: "Candidat invalide." },
         { status: 400 }
       );
     }
@@ -60,7 +61,8 @@ if (!settings?.voting_open) {
 
     if (candidateError || !candidate) {
       return NextResponse.json(
-        { error: "Ce candidat n'existe pas." },
+        { code: "not_found",
+          error: "Ce candidat n'existe pas." },
         { status: 404 }
       );
     }
@@ -70,7 +72,8 @@ if (!settings?.voting_open) {
       candidate.category !== "reine"
     ) {
       return NextResponse.json(
-        { error: "Catégorie de candidat invalide." },
+        { code: "invalid_category",
+          error: "Catégorie de candidat invalide." },
         { status: 400 }
       );
     }
@@ -102,7 +105,8 @@ if (!settings?.voting_open) {
       );
 
       return NextResponse.json(
-        { error: "Impossible de vérifier votre vote." },
+        { code: "check_failed",
+          error: "Impossible de vérifier votre vote." },
         { status: 500 }
       );
     }
@@ -110,6 +114,7 @@ if (!settings?.voting_open) {
     if (existingVote) {
       return NextResponse.json(
         {
+          code: "already_voted",
           error: `Vous avez déjà voté pour la catégorie ${candidate.category}.`,
         },
         { status: 409 }
@@ -131,14 +136,16 @@ if (!settings?.voting_open) {
       if (voteError.code === "23505") {
         return NextResponse.json(
           {
-            error: `Vous avez déjà voté pour la catégorie ${candidate.category}.`,
+            code: "already_voted",
+          error: `Vous avez déjà voté pour la catégorie ${candidate.category}.`,
           },
           { status: 409 }
         );
       }
 
       return NextResponse.json(
-        { error: "Impossible d'enregistrer le vote." },
+        { code: "insert_failed",
+          error: "Impossible d'enregistrer le vote." },
         { status: 500 }
       );
     }
@@ -170,7 +177,8 @@ if (!settings?.voting_open) {
     console.error("Erreur API vote:", error);
 
     return NextResponse.json(
-      { error: "Erreur interne du serveur." },
+      { code: "server_error",
+          error: "Erreur interne du serveur." },
       { status: 500 }
     );
   }

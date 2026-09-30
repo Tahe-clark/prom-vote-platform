@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { EDITS_LOCKED } from "@/lib/edit-lock";
+import type { AdminActionResult } from "@/actions/result";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -27,7 +29,13 @@ async function requireAdmin() {
   return supabase;
 }
 
-export async function toggleVoting(formData: FormData) {
+export async function toggleVoting(
+  formData: FormData
+): Promise<AdminActionResult> {
+  if (EDITS_LOCKED) {
+    return { ok: false, error: "locked" };
+  }
+
   const supabase = await requireAdmin();
 
   const settingsId = formData.get("settings_id");
@@ -35,7 +43,7 @@ export async function toggleVoting(formData: FormData) {
     formData.get("current_status") === "true";
 
   if (typeof settingsId !== "string") {
-    throw new Error("Configuration invalide.");
+    return { ok: false, error: "invalid" };
   }
 
   const { error } = await supabase
@@ -51,11 +59,11 @@ export async function toggleVoting(formData: FormData) {
       error
     );
 
-    throw new Error(
-      "Impossible de modifier le statut du vote."
-    );
+    return { ok: false, error: "failed" };
   }
 
   revalidatePath("/admin/dashboard");
   revalidatePath("/vote");
+
+  return { ok: true };
 }

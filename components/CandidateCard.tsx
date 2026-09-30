@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { useI18n } from "@/lib/i18n/client";
 import type { Candidate } from "@/types/candidate";
 
 import {
@@ -58,6 +59,13 @@ export default function CandidateCard({
   const [message, setMessage] =
     useState("");
 
+  // true juste après un vote réussi (affiche la confirmation).
+  const [success, setSuccess] =
+    useState(false);
+
+  const { t } = useI18n();
+  const tc = t.vote.card;
+
   /*
    * true si un vote existe déjà
    * dans cette catégorie.
@@ -111,9 +119,11 @@ export default function CandidateCard({
         await response.json();
 
       if (!response.ok) {
+        setSuccess(false);
         setMessage(
-          result.error ??
-            "Une erreur est survenue."
+          (result.code && t.vote.errors[result.code]) ??
+            result.error ??
+            t.vote.errors.server_error
         );
 
         return;
@@ -125,9 +135,8 @@ export default function CandidateCard({
        */
       onVoteSuccess(candidate.id);
 
-      setMessage(
-        "✓ Vote enregistré"
-      );
+      setSuccess(true);
+      setMessage(`✓ ${tc.success}`);
 
       /*
        * Petite attente pour que
@@ -136,11 +145,11 @@ export default function CandidateCard({
       setTimeout(() => {
         setOpen(false);
         setMessage("");
+        setSuccess(false);
       }, 900);
     } catch {
-      setMessage(
-        "Impossible d'enregistrer le vote. Réessayez."
-      );
+      setSuccess(false);
+      setMessage(tc.networkError);
     } finally {
       setLoading(false);
     }
@@ -222,7 +231,7 @@ export default function CandidateCard({
               text-[#D9C7B8]/30
             "
           >
-            Photo à venir
+            {tc.photoSoon}
           </div>
         )}
 
@@ -327,7 +336,7 @@ export default function CandidateCard({
               <span>✓</span>
 
               <span>
-                Vote enregistré
+                {tc.voted}
               </span>
             </div>
           )}
@@ -353,7 +362,7 @@ export default function CandidateCard({
                 text-[#D9C7B8]/30
               "
             >
-              Vote déjà effectué
+              {tc.alreadyVoted}
             </button>
           )}
 
@@ -368,6 +377,7 @@ export default function CandidateCard({
 
                 if (!isOpen) {
                   setMessage("");
+                  setSuccess(false);
                 }
               }}
             >
@@ -412,8 +422,8 @@ export default function CandidateCard({
                 `}
               >
                 {votingOpen
-                  ? "Offrir mon vote"
-                  : "Votes fermés"}
+                  ? tc.cta
+                  : tc.closedCta}
               </DialogTrigger>
 
               <DialogContent
@@ -478,7 +488,7 @@ export default function CandidateCard({
                       text-[#F2845C]
                     "
                   >
-                    Confirmation de vote
+                    {tc.confirmEyebrow}
                   </p>
 
                   <h3
@@ -499,10 +509,7 @@ export default function CandidateCard({
                       text-[#D9C7B8]/60
                     "
                   >
-                    Confirmez-vous
-                    l&apos;attribution de
-                    votre unique suffrage
-                    dans cette catégorie ?
+                    {tc.confirmBody}
                   </p>
                 </div>
 
@@ -520,9 +527,7 @@ export default function CandidateCard({
                       font-medium
 
                       ${
-                        message.includes(
-                          "✓"
-                        )
+                        success
                           ? `
                             border-[#F2845C]/40
                             bg-[#F2845C]/10
@@ -541,9 +546,7 @@ export default function CandidateCard({
                 )}
 
                 {/* Actions */}
-                {!message.includes(
-                  "✓"
-                ) && (
+                {!success && (
                   <div
                     className="
                       mt-8
@@ -575,7 +578,7 @@ export default function CandidateCard({
                         hover:text-[#D9C7B8]
                       "
                     >
-                      Annuler
+                      {tc.cancel}
                     </button>
 
                     <button
@@ -606,8 +609,8 @@ export default function CandidateCard({
                       "
                     >
                       {loading
-                        ? "Enregistrement..."
-                        : "Confirmer"}
+                        ? tc.pending
+                        : tc.confirm}
                     </button>
                   </div>
                 )}

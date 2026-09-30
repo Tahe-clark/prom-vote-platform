@@ -1,13 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useId, useState } from "react";
+import {
+  ImagePlus,
+  Link2,
+  Loader2,
+  Upload,
+  X,
+} from "lucide-react";
 
-export default function CandidatePhotoField() {
-  const [photoUrl, setPhotoUrl] = useState("");
+import { EDITS_LOCKED } from "@/lib/edit-lock";
+import { useI18n } from "@/lib/i18n/client";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
+
+interface CandidatePhotoFieldProps {
+  /** Photo déjà enregistrée (formulaire de modification). */
+  defaultUrl?: string | null;
+  /** Appelé quand un envoi est tenté alors que l'admin est verrouillé. */
+  onLocked?: () => void;
+}
+
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+const MAX_SIZE = 50 * 1024 * 1024;
+
+export default function CandidatePhotoField({
+  defaultUrl,
+  onLocked,
+}: CandidatePhotoFieldProps) {
+  const inputId = useId();
+  const { t } = useI18n();
+  const tp = t.admin.photo;
+
+  const [photoUrl, setPhotoUrl] = useState(
+    defaultUrl ?? ""
+  );
+  const [mode, setMode] = useState<"file" | "url">(
+    "file"
+  );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [preview, setPreview] = useState("");
 
   async function handleFileUpload(
     event: React.ChangeEvent<HTMLInputElement>
@@ -20,25 +57,24 @@ export default function CandidatePhotoField() {
 
     setError("");
 
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-    ];
+    // Admin verrouillé : rien n'est envoyé vers le stockage.
+    if (EDITS_LOCKED) {
+      event.target.value = "";
+      onLocked?.();
+      return;
+    }
 
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
       setError(
-        "Format non accepté. Utilisez JPG, PNG ou WebP."
+tp.errorFormat
       );
       event.target.value = "";
       return;
     }
 
-    const maxSize = 50 * 1024 * 1024;
-
-    if (file.size > maxSize) {
+    if (file.size > MAX_SIZE) {
       setError(
-        "L'image dépasse la taille maximale de 50 Mo."
+tp.errorSize
       );
       event.target.value = "";
       return;
@@ -52,11 +88,7 @@ export default function CandidatePhotoField() {
       const extension =
         file.name.split(".").pop()?.toLowerCase() || "jpg";
 
-      const fileName =
-        `${crypto.randomUUID()}.${extension}`;
-
-      const filePath =
-        `candidates/${fileName}`;
+      const filePath = `candidates/${crypto.randomUUID()}.${extension}`;
 
       const { error: uploadError } =
         await supabase.storage
@@ -68,15 +100,10 @@ export default function CandidatePhotoField() {
           });
 
       if (uploadError) {
-        console.error(
-          "Erreur upload:",
-          uploadError
-        );
-
+        console.error("Erreur upload:", uploadError);
         setError(
-          "Impossible de téléverser l'image."
+tp.errorUpload
         );
-
         return;
       }
 
@@ -84,118 +111,150 @@ export default function CandidatePhotoField() {
         .from("candidate-photos")
         .getPublicUrl(filePath);
 
-      const publicUrl = data.publicUrl;
-
-      setPhotoUrl(publicUrl);
-      setPreview(publicUrl);
+      setPhotoUrl(data.publicUrl);
     } catch (uploadError) {
       console.error(uploadError);
-
       setError(
-        "Une erreur est survenue pendant l'envoi de l'image."
+tp.errorNetwork
       );
     } finally {
       setUploading(false);
+      event.target.value = "";
     }
   }
 
-  function handleExternalUrl(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const url = event.target.value;
-
-    setPhotoUrl(url);
-    setPreview(url);
-    setError("");
-  }
-
   return (
-    <div className="space-y-5">
-
+    <div className="flex gap-4">
       {/* Valeur réellement envoyée au serveur */}
-      <input
-        type="hidden"
-        name="photo_url"
-        value={photoUrl}
-      />
+      <input type="hidden" name="photo_url" value={photoUrl} />
 
-      {/* OPTION 1 */}
-      <div className="rounded-lg border p-4">
-        <p className="font-medium">
-          📁 Depuis votre appareil
-        </p>
-
-        <p className="mt-1 text-xs text-neutral-500">
-          JPG, PNG ou WebP.
-        </p>
-
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={handleFileUpload}
-          disabled={uploading}
-          className="mt-3 block w-full text-sm"
-        />
-
-        {uploading && (
-          <p className="mt-2 text-sm text-neutral-500">
-            Téléversement en cours...
-          </p>
+      {/* Aperçu au format de la carte publique (4:5) */}
+      <div className="relative aspect-[4/5] w-24 shrink-0 overflow-hidden rounded-lg bg-adm-bg ring-1 ring-adm-line sm:w-28">
+        {photoUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photoUrl}
+              alt={tp.preview}
+              className="h-full w-full object-cover"
+              onError={() =>
+                setError(
+tp.errorBroken
+                )
+              }
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setPhotoUrl("");
+                setError("");
+              }}
+              className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-adm-wine/80 text-white outline-none hover:bg-adm-wine focus-visible:ring-2 focus-visible:ring-white"
+              aria-label={tp.remove}
+            >
+              <X className="size-3.5" />
+            </button>
+          </>
+        ) : (
+          <div className="grid h-full place-items-center text-adm-muted/60">
+            {uploading ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <ImagePlus className="size-6" />
+            )}
+          </div>
         )}
       </div>
 
-      <div className="text-center text-sm font-medium text-neutral-400">
-        OU
-      </div>
-
-      {/* OPTION 2 */}
-      <div className="rounded-lg border p-4">
-        <label
-          htmlFor="external_photo_url"
-          className="font-medium"
+      <div className="min-w-0 flex-1 space-y-3">
+        <div
+          role="tablist"
+          aria-label={tp.source}
+          className="inline-flex rounded-lg bg-adm-bg p-0.5 text-xs"
         >
-          🔗 URL externe
-        </label>
-
-        <input
-          id="external_photo_url"
-          type="url"
-          placeholder="https://..."
-          onChange={handleExternalUrl}
-          className="mt-3 h-10 w-full rounded-md border px-3 text-sm"
-        />
-
-        <p className="mt-2 text-xs text-neutral-500">
-          Vous pouvez par exemple téléverser
-          l&apos;image sur ImgBB puis coller son lien ici.
-        </p>
-      </div>
-
-      {error && (
-        <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </p>
-      )}
-
-      {/* PREVIEW */}
-      {preview && (
-        <div className="rounded-lg border p-4">
-          <p className="mb-3 text-sm font-medium">
-            Aperçu
-          </p>
-
-          <img
-            src={preview}
-            alt="Aperçu de la photo du candidat"
-            className="h-48 w-40 rounded-lg object-cover"
-            onError={() =>
-              setError(
-                "Impossible de charger cette image. Vérifiez le lien."
-              )
-            }
-          />
+          {(
+            [
+              ["file", tp.upload, Upload],
+              ["url", tp.link, Link2],
+            ] as const
+          ).map(([value, label, Icon]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={mode === value}
+              onClick={() => setMode(value)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-adm-accent/40",
+                mode === value
+                  ? "bg-white text-adm-ink shadow-sm"
+                  : "text-adm-muted hover:text-adm-ink"
+              )}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </button>
+          ))}
         </div>
-      )}
+
+        {mode === "file" ? (
+          <label
+            htmlFor={inputId}
+            className={cn(
+              "flex cursor-pointer flex-col items-start gap-0.5 rounded-lg border border-dashed border-adm-line px-3 py-3 text-sm transition-colors hover:border-adm-accent/60 hover:bg-adm-bg/60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-adm-accent/40",
+              uploading && "pointer-events-none opacity-60"
+            )}
+          >
+            <span className="font-medium text-adm-ink">
+              {uploading
+                ? tp.uploading
+                : photoUrl
+                  ? tp.replace
+                  : tp.choose}
+            </span>
+            <span className="text-xs text-adm-muted">
+              {tp.hint}
+            </span>
+            <input
+              id={inputId}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileUpload}
+              disabled={uploading}
+              className="sr-only"
+            />
+          </label>
+        ) : (
+          <div className="space-y-1.5">
+            <input
+              type="url"
+              inputMode="url"
+              placeholder="https://…"
+              defaultValue={
+                photoUrl.startsWith("http") ? photoUrl : ""
+              }
+              onChange={(event) => {
+                setPhotoUrl(event.target.value.trim());
+                setError("");
+              }}
+              className="h-10 w-full rounded-lg border border-adm-line bg-white px-3 text-sm text-adm-ink outline-none placeholder:text-adm-muted/60 focus-visible:border-adm-accent focus-visible:ring-3 focus-visible:ring-adm-accent/20"
+              aria-label={tp.linkLabel}
+            />
+            <p className="text-xs text-adm-muted">
+              {tp.linkHint}
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <p
+            role="alert"
+            className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-800"
+          >
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export type LoginState = {
+  /** Code traduit côté client : "missing" | "invalid" | "forbidden". */
   error?: string;
 };
 
@@ -21,7 +22,7 @@ export async function login(
     !password
   ) {
     return {
-      error: "Email et mot de passe requis.",
+      error: "missing",
     };
   }
 
@@ -35,7 +36,7 @@ export async function login(
 
   if (error || !data.user) {
     return {
-      error: "Email ou mot de passe incorrect.",
+      error: "invalid",
     };
   }
 
@@ -52,7 +53,7 @@ export async function login(
     await supabase.auth.signOut();
 
     return {
-      error: "Vous n'êtes pas autorisé à accéder à l'administration.",
+      error: "forbidden",
     };
   }
 

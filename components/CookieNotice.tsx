@@ -1,27 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
+
+import { useI18n } from "@/lib/i18n/client";
 
 const STORAGE_KEY = "prom_cookie_notice_seen";
 
-export default function CookieNotice() {
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
+const CHANGE_EVENT = "prom-cookie-notice-change";
 
-    return (
-      window.localStorage.getItem(STORAGE_KEY) !== "true"
-    );
-  });
+function subscribe(callback: () => void) {
+  window.addEventListener(CHANGE_EVENT, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(CHANGE_EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function readSeen() {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export default function CookieNotice() {
+  const { t } = useI18n();
+
+  // Côté serveur on considère la notice « vue » (rien n'est rendu),
+  // puis le navigateur lit localStorage après l'hydratation :
+  // plus de différence serveur / client.
+  const seen = useSyncExternalStore(subscribe, readSeen, () => true);
+  const visible = !seen;
 
   function handleDismiss() {
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      "true"
-    );
-
-    setVisible(false);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, "true");
+    } catch {
+      // Stockage indisponible : on masque quand même pour cette page.
+    }
+    window.dispatchEvent(new Event(CHANGE_EVENT));
   }
 
   if (!visible) {
@@ -69,7 +88,7 @@ export default function CookieNotice() {
               text-[#F2845C]
             "
           >
-            Cookie nécessaire au vote
+            {t.vote.cookie.title}
           </p>
 
           <p
@@ -82,11 +101,7 @@ export default function CookieNotice() {
               text-[#D9C7B8]/60
             "
           >
-            Ce site utilise un cookie strictement
-            nécessaire pour mémoriser anonymement
-            votre participation et limiter les votes
-            multiples. Aucun suivi publicitaire ou
-            marketing n&apos;est effectué.
+            {t.vote.cookie.body}
           </p>
         </div>
 
@@ -114,7 +129,7 @@ export default function CookieNotice() {
             hover:text-[#1A1213]
           "
         >
-          Compris
+          {t.vote.cookie.ok}
         </button>
       </div>
     </div>

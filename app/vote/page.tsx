@@ -2,6 +2,9 @@ import { cookies } from "next/headers";
 
 import CandidateList from "@/components/CandidateList";
 import CookieNotice from "@/components/CookieNotice";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import PlatformAnnouncement from "@/components/PlatformAnnouncement";
+import { getDictionary } from "@/lib/i18n/server";
 
 import { supabase } from "@/lib/supabase";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -103,11 +106,15 @@ export default async function VotePage() {
     candidates,
     settings,
     existingVotes,
+    { locale, t: dict },
   ] = await Promise.all([
     getCandidates(),
     getVotingSettings(),
     getExistingVotes(),
+    getDictionary(),
   ]);
+
+  const t = dict.vote;
 
   const queens = candidates.filter(
     (candidate) =>
@@ -153,6 +160,11 @@ export default async function VotePage() {
         "
       />
 
+      {/* Langue */}
+      <div className="relative z-20 mx-auto flex max-w-6xl justify-end px-5 pt-5 sm:px-6">
+        <LanguageSwitcher tone="dark" />
+      </div>
+
       {/* Header */}
       <header
         className="
@@ -162,10 +174,10 @@ export default async function VotePage() {
           max-w-6xl
           px-5
           pb-12
-          pt-12
+          pt-6
           text-center
           sm:px-6
-          sm:pt-16
+          sm:pt-10
         "
       >
         <div
@@ -203,7 +215,7 @@ export default async function VotePage() {
               text-[#D9C7B8]/80
             "
           >
-            Scrutin Officiel 2026
+            {t.badge}
           </span>
         </div>
 
@@ -218,7 +230,7 @@ export default async function VotePage() {
             lg:text-8xl
           "
         >
-          L&apos;Élection{" "}
+          {t.titleBefore}
           <span
             className="
               bg-gradient-to-r
@@ -231,8 +243,9 @@ export default async function VotePage() {
               text-transparent
             "
           >
-            Royale
+            {t.titleAccent}
           </span>
+          {t.titleAfter}
         </h1>
 
         <p
@@ -249,8 +262,7 @@ export default async function VotePage() {
             md:text-sm
           "
         >
-          Célébrons l&apos;excellence et le
-          charisme de notre promotion
+          {t.subtitle}
         </p>
 
         <div
@@ -292,16 +304,20 @@ export default async function VotePage() {
             "
           >
             <h2 className="font-royal text-xl text-[#F2845C]">
-              Les votes sont actuellement fermés.
+              {t.closedTitle}
             </h2>
 
             <p className="mt-2 text-sm text-[#D9C7B8]/60">
-              Vous pouvez consulter les candidats,
-              mais aucun nouveau vote ne sera accepté.
+              {t.closedBody}
             </p>
           </div>
         </div>
       )}
+
+      {/* Annonce : future plateforme de vote */}
+      <div className="relative z-10 mx-auto mb-16 max-w-3xl px-5 sm:px-6">
+        <PlatformAnnouncement locale={locale} tone="gala" />
+      </div>
 
       {/* Candidats */}
       <div
@@ -317,9 +333,9 @@ export default async function VotePage() {
         "
       >
         <CandidateList
-          eyebrow="Catégorie I"
-          title="Prétendantes au titre de"
-          accent="Reine"
+          eyebrow={t.queenEyebrow}
+          title={t.queenTitle}
+          accent={t.queenAccent}
           candidates={queens}
           initialVotedCandidateId={
             existingVotes.reine
@@ -330,9 +346,9 @@ export default async function VotePage() {
         />
 
         <CandidateList
-          eyebrow="Catégorie II"
-          title="Prétendants au titre de"
-          accent="Roi"
+          eyebrow={t.kingEyebrow}
+          title={t.kingTitle}
+          accent={t.kingAccent}
           candidates={kings}
           initialVotedCandidateId={
             existingVotes.roi
@@ -358,8 +374,7 @@ export default async function VotePage() {
           text-[#D9C7B8]/30
         "
       >
-        Comité du Bal de Promo 2026 • Système
-        de Vote Anonyme &amp; Sécurisé
+        {t.footer}
       </footer>
 
       <CookieNotice />

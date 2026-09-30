@@ -136,3 +136,22 @@
 .font-body {
   font-family: var(--font-inder), sans-serif;
 }
+/* ---------- Espace admin ---------- */
+@theme {
+  --color-adm-wine: #2a1719;
+  --color-adm-wine-2: #3a2225;
+  --color-adm-bg: #f4f1f2;
+  --color-adm-ink: #221a1c;
+  --color-adm-muted: #6e6265;
+  --color-adm-line: #e4dcde;
+  --color-adm-accent: #c4552f;
+  --color-adm-coral: #f2845c;
+  --color-adm-cream: #d9c7b8;
+  --color-adm-roi: #34507f;
+  --color-adm-reine: #a23d66;
+  --color-adm-open: #2f7a55;
+}
+
+.nums {
+  font-variant-numeric: lining-nums tabular-nums;
+}
